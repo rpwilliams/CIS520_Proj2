@@ -38,6 +38,8 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
+
+
   /* Create a new thread to execute FILE_NAME. */
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
@@ -89,9 +91,9 @@ int
 process_wait (tid_t child_tid UNUSED) 
 {
   /* This will need to be changed eventually */
-  while(true) {
+  // while(true) {
 
-  }
+  // }
 
   return -1;
 }
@@ -200,7 +202,7 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
-static bool setup_stack (void **esp);
+static bool setup_stack (void **esp, int argc, char *argv[]);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
@@ -225,6 +227,22 @@ load (const char *file_name, void (**eip) (void), void **esp)
   if (t->pagedir == NULL) 
     goto done;
   process_activate ();
+
+
+  /* List of all string arguments to be passed to the stack */
+  char *argv[25];
+  /* The number of strings pointed to by argv */
+  int argc = 0;
+  /* A string's token, which will be extracted from strtok_r */
+  char *token;
+  /* Used to keep track of the position of "token" */
+  char *save_ptr;
+
+  for (token = strtok_r ((char *) file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)) {
+ 	printf ("'%s'\n", token);
+ 	argv[argc] = token;
+ 	argc++;
+  }
 
   /* Open executable file. */
   file = filesys_open (file_name);
@@ -307,7 +325,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
     }
 
   /* Set up stack. */
-  if (!setup_stack (esp))
+  if (!setup_stack (esp, argc, argv))
     goto done;
 
   /* Start address. */
@@ -432,7 +450,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
-setup_stack (void **esp) 
+setup_stack (void **esp, int args, char *argv[]) 
 {
   uint8_t *kpage;
   bool success = false;
@@ -442,7 +460,10 @@ setup_stack (void **esp)
     {
       success = install_page (((uint8_t *) PHYS_BASE) - PGSIZE, kpage, true);
       if (success)
-        *esp = PHYS_BASE - 12;
+      {
+      	/* The base stack pointer %esp */
+      	*esp = PHYS_BASE - 12;
+      }
       else
         palloc_free_page (kpage);
     }
