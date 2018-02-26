@@ -202,6 +202,9 @@ struct Elf32_Phdr
 #define PF_W 2          /* Writable. */
 #define PF_R 4          /* Readable. */
 
+/* The maximum size of command line arguments */
+#define MAX_ARGS_SIZE 25
+
 static bool setup_stack (void **esp, int argc, char *argv[]);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
@@ -230,19 +233,11 @@ load (const char *file_name, void (**eip) (void), void **esp)
 
 
   /* List of all string arguments to be passed to the stack */
-  char *argv[25];
+  char *argv[MAX_ARGS_SIZE];
   /* The number of strings pointed to by argv */
   int argc = 0;
-  /* A string's token, which will be extracted from strtok_r */
-  char *token;
-  /* Used to keep track of the position of "token" */
-  char *save_ptr;
-
-  for (token = strtok_r ((char *) file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)) {
- 	printf ("'%s'\n", token);
- 	argv[argc] = token;
- 	argc++;
-  }
+  
+  populate_argv(file_name, argc, argv);
 
   /* Open executable file. */
   file = filesys_open (file_name);
@@ -488,4 +483,23 @@ install_page (void *upage, void *kpage, bool writable)
      address, then map our page there. */
   return (pagedir_get_page (t->pagedir, upage) == NULL
           && pagedir_set_page (t->pagedir, upage, kpage, writable));
+}
+
+
+/* Adds each of the command line arguments to the list of command line arguments, argv.
+	For example, if the command was "echo x", argv would become ['echo', 'x'].
+	strtok_r is implemented in lib/string.c.
+ */
+static void
+populate_argv(const char * file_name, int argc, char *argv[]) {
+  /* A string's token, which will be extracted from strtok_r */
+  char *token;
+  /* Used to keep track of the position of "token" */
+  char *save_ptr;
+
+  for (token = strtok_r ((char *) file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)) {
+ 	printf ("'%s'\n", token);
+ 	argv[argc] = token;
+ 	argc++;
+  }
 }
