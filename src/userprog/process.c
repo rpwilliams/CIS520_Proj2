@@ -445,7 +445,7 @@ load_segment (struct file *file, off_t ofs, uint8_t *upage,
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
 static bool
-setup_stack (void **esp, int args, char *argv[]) 
+setup_stack (void **esp, int argc, char *argv[]) 
 {
   uint8_t *kpage;
   bool success = false;
@@ -458,6 +458,41 @@ setup_stack (void **esp, int args, char *argv[])
       {
       	/* The base stack pointer %esp */
       	*esp = PHYS_BASE - 12;
+
+      	/* List of references to the arguments in argv */
+      	uint32_t *argv_ptrs[argc];
+      	int argv_len = argc - 1;
+      	for(int i = 0; i < argv_len; i++) {
+      		// printf("esp: %p\n", &(*esp));
+      		/* Allocate space for the string at the stack pointer */
+      		*esp -= (sizeof(char) * strlen(argv[i]) + 1);
+      		/* Add the string's corresponding reference to the list */
+      		argv_ptrs[i] = (uint32_t *) *esp;
+      		/* Copy the string (argv[i]) to the stack (*esp) */
+      		memcpy(*esp, argv[i], strlen(argv[i]) + 1);
+      	}
+
+      	/* For best performance we round the stack pointer down to a multiple of 4 before the first push */
+      	*esp -= 4;
+      	/* Push a null pointer sentinel */
+      	(*(int *)(*esp)) = 0;
+
+      	/* Add the arguments to the stack */
+      	*esp -= 4;
+      	for(int i = 0; i < argv_len; i++) {
+      		(*(uint32_t **)(*esp)) = argv_ptrs[i];
+      		*esp -= 4;
+      	}
+
+      	/* Push a pointer to argv[0]  */
+      	(*(uintptr_t **)(*esp)) = *esp + 4;
+
+      	/* Push argc */
+      	*esp -= 4;
+      	(*(uint32_t **)(*esp)) = argc;
+
+      	/* Push return address placeholder (0 since no actual return address) */
+      	(*(uint32_t **)(*esp)) = 0;
       }
       else
         palloc_free_page (kpage);
@@ -498,7 +533,7 @@ populate_argv(const char * file_name, int argc, char *argv[]) {
   char *save_ptr;
 
   for (token = strtok_r ((char *) file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)) {
- 	printf ("'%s'\n", token);
+ 	// printf ("'%s'\n", token);
  	argv[argc] = token;
  	argc++;
   }
