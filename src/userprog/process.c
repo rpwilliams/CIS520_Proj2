@@ -459,17 +459,17 @@ setup_stack (void **esp, int argc, char *argv[])
       	/* The base stack pointer %esp */
       	*esp = PHYS_BASE - 12;
 
-      	/* List of references to the arguments in argv */
+      	/* List of addresses to each argument in argv */
       	uint32_t *argv_ptrs[argc];
       	int argv_len = argc - 1;
       	for(int i = 0; i < argv_len; i++) {
       		// printf("esp: %p\n", &(*esp));
       		/* Allocate space for the string at the stack pointer */
       		*esp -= (sizeof(char) * strlen(argv[i]) + 1);
-      		/* Add the string's corresponding reference to the list */
+      		/* Add the string's address to the list */
       		argv_ptrs[i] = (uint32_t *) *esp;
       		/* Copy the string (argv[i]) to the stack (*esp) */
-      		memcpy(*esp, argv[i], strlen(argv[i]) + 1);
+      		memcpy(*esp, argv[i], sizeof(char)*strlen(argv[i]) + 1);
       	}
 
       	/* For best performance we round the stack pointer down to a multiple of 4 before the first push */
@@ -477,7 +477,7 @@ setup_stack (void **esp, int argc, char *argv[])
       	/* Push a null pointer sentinel */
       	(*(int *)(*esp)) = 0;
 
-      	/* Add the arguments to the stack */
+      	/* Add the addresses to the stack */
       	*esp -= 4;
       	for(int i = 0; i < argv_len; i++) {
       		(*(uint32_t **)(*esp)) = argv_ptrs[i];
