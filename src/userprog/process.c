@@ -38,10 +38,12 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
+   /* Gets the first word (argv[0]), which is the program name */
+   char *save_ptr;
+   char *program_name = strtok_r((char *)file_name, " ", &save_ptr);
 
-
-  /* Create a new thread to execute FILE_NAME. */
-  tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+  /* Create a new thread to execute program_name */
+  tid = thread_create (program_name, PRI_DEFAULT, start_process, fn_copy);
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
@@ -237,13 +239,14 @@ load (const char *file_name, void (**eip) (void), void **esp)
   /* The number of strings pointed to by argv */
   int argc = 0;
   
+  /* Put the arguments into the argument array */
   populate_argv(file_name, argc, argv);
 
   /* Open executable file. */
-  file = filesys_open (file_name);
+  file = filesys_open (argv[0]);
   if (file == NULL) 
     {
-      printf ("load: %s: open failed\n", file_name);
+      printf ("load: %s: open failed\n", argv[0]);
       goto done; 
     }
 
@@ -464,15 +467,15 @@ setup_stack (void **esp, int argc, char *argv[])
       	int argv_len = argc - 1;
       	for(int i = 0; i < argv_len; i++) {
       		// printf("esp: %p\n", &(*esp));
-      		/* Allocate space for the string at the stack pointer */
+      		/* Allocate space for the string */
       		*esp -= (sizeof(char) * strlen(argv[i]) + 1);
-      		/* Add the string's address to the list */
-      		argv_ptrs[i] = (uint32_t *) *esp;
       		/* Copy the string (argv[i]) to the stack (*esp) */
       		memcpy(*esp, argv[i], sizeof(char)*strlen(argv[i]) + 1);
+      		/* Add the string's address to the list */
+      		argv_ptrs[i] = (uint32_t *) *esp;
       	}
 
-      	/* For best performance we round the stack pointer down to a multiple of 4 before the first push */
+      	/* For best performance we round the stack pointer down to a multiple of 4 before we push */
       	*esp -= 4;
       	/* Push a null pointer sentinel */
       	(*(int *)(*esp)) = 0;
