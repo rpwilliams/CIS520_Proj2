@@ -8,6 +8,7 @@
 static void syscall_handler (struct intr_frame *);
 void check_valid_ptr (const void *ptr);
 void check_valid_buffer(void *buffer, unsigned size);
+void get_arguments(struct intr_frame *f, int *args, int n);
 
 void
 syscall_init (void) 
@@ -18,7 +19,7 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {  
-  // char* argv[3];
+  int args[3];
   /* Ensure user provided pointer is valid/safe */
   check_valid_ptr((const void *) f->esp);
   printf ("system call!\n");
@@ -30,7 +31,8 @@ syscall_handler (struct intr_frame *f UNUSED)
   		break;
   	/* Terminate this process. */
   	case SYS_EXIT:
-  		// exit(argv[0]);
+  		get_arguments(f, &args[0], 1);
+  		exit(args[0]);
   		break;
   	/* Start another process. */
   	case SYS_EXEC:
@@ -131,6 +133,7 @@ void exit(int status) {
 
 // }
 
+/* Ensures the pointer is valid */
 void check_valid_ptr(const void *ptr) {
 	/* If a pointer is null, is not a user virtual address,
 	 or points to unmapped memory, it is invalid*/
@@ -140,6 +143,7 @@ void check_valid_ptr(const void *ptr) {
 	}
 }
 
+/* Ensures the buffer is valid */
 void check_valid_buffer(void *buffer, unsigned size) {
 	/* If a pointer is null, is not a user virtual address,
 	 or points to unmapped memory, it is invalid*/
@@ -149,4 +153,14 @@ void check_valid_buffer(void *buffer, unsigned size) {
 		ptr++;
 	}
 	
+}
+
+/* Gets n arguments off of the stack */
+void get_arguments(struct intr_frame *f, int *args, int n) {
+	int *arg;
+	for(int i = 0; i < n; i++) {
+		arg = (int*) f->esp + i + 1;
+		check_valid_ptr((const void*) arg);
+		args[i] = *arg;
+	}
 }

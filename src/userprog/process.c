@@ -93,9 +93,9 @@ int
 process_wait (tid_t child_tid UNUSED) 
 {
   /* This will need to be changed eventually */
-  // while(true) {
+  while(true) {
 
-  // }
+  }
 
   return -1;
 }
