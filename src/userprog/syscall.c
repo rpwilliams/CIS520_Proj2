@@ -35,6 +35,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   		break;
   	/* Terminate this process. */
   	case SYS_EXIT:
+  		// printf("in exit");
   		get_arguments(f, &args[0], 1);
   		exit(args[0]);
   		break;
@@ -61,11 +62,12 @@ syscall_handler (struct intr_frame *f UNUSED)
   		break;
   	/* Write to a file. */
   	case SYS_WRITE:
+  		// printf("in write");
   		/* Get the 3 arguments for write (filename, buffer, and size) off the stack */ 
   		get_arguments(f, &args[0], 3);
 
   		/* Ensure the buffer is valid */
-  		check_valid_buffer((void*) args[1], args[2]);
+  		// check_valid_buffer((void*) args[1], args[2]);
 
   		/* Transform buffer from user virtual address to kernel virtual address */
   		args[1] = (int) pagedir_get_page(thread_current()->pagedir, (const void*) args[1]);		
@@ -81,10 +83,13 @@ syscall_handler (struct intr_frame *f UNUSED)
   	/* Close a file. */
   	case SYS_CLOSE:
   		break;
+  	default:
+  		// printf("no man's land");
+  		exit(-1);
+  		break;
 
   }
-  
-  thread_exit ();
+ 
 }
 
 
@@ -135,6 +140,7 @@ void exit(int status) {
 int write (int fd, const void *buffer, unsigned size) {
 	/* If the file descriptor is standard output,
 	 we write the buffer for the entire length of size */
+	// lock_acquire(&file_lock);
 	if(fd == STDOUT_FILENO) {
 		/* Print the buffer to the console */
 		putbuf(buffer, size);
@@ -149,6 +155,7 @@ int write (int fd, const void *buffer, unsigned size) {
 		return 0;
 
 	}
+	// lock_release(&file_lock);
 	
 }
 

@@ -483,22 +483,22 @@ setup_stack (void **esp, int argc, char *argv[])
       	/* Push a null pointer sentinel */
       	(*(int *)(*esp)) = 0;
 
+        *esp -= 4;
       	/* Add the addresses to the stack */
-      	for(int i = last_elem; i >= 0; i--)  {
-          *esp -= 4;
+      	for(int i = last_elem; i >= 0; i--)  {      
       		(*(uint32_t **)(*esp)) = argv_ptrs[i];
+          *esp -= 4;
       	}
 
-        *esp -= 4;
       	/* Push a pointer to argv[0]  */
       	(*(uintptr_t **)(*esp)) = *esp + 4;
 
       	/* Push argc */
       	*esp -= 4;
-      	(*(uint32_t **)(*esp)) = argc;
+      	(*(int *)(*esp)) = argc;
 
       	/* Push return address placeholder (0 since no actual return address) */
-      	(*(uint32_t **)(*esp)) = 0;
+      	(*(int *)(*esp)) = 0;
       }
       else
         palloc_free_page (kpage);

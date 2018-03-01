@@ -106,7 +106,7 @@ thread_start (void)
 {
   /* Create the idle thread. */
   struct semaphore idle_started;
-  sema_init (&idle_started, 0);
+  sema_init (&idle_started, 1);
   thread_create ("idle", PRI_MIN, idle, &idle_started);
 
   /* Start preemptive thread scheduling. */
