@@ -530,6 +530,9 @@ init_thread (struct thread *t, const char *name, int priority)
   t->waiting_lock = NULL;
   list_init(&t->donated_list);
 
+  /* Initialize the list of file descriptors */
+  list_init(&t->fds);
+
   /* Initialize the semaphore */
   sema_init(&t->timer_sema, 0);
 }

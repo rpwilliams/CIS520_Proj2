@@ -113,6 +113,10 @@ struct thread
     /* The lock currently trying to be acquired by the thread */
     struct lock* waiting_lock;
 
+    /* The list of file descriptors that belong to this thread */
+    struct list fds;
+
+
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */

@@ -207,11 +207,14 @@ struct Elf32_Phdr
 /* The maximum size of command line arguments */
 #define MAX_ARGS_SIZE 25
 
+static void populate_argv(const char * file_name, int argc, char *argv[]);
+
 static bool setup_stack (void **esp, int argc, char *argv[]);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
 static bool load_segment (struct file *file, off_t ofs, uint8_t *upage,
                           uint32_t read_bytes, uint32_t zero_bytes,
                           bool writable);
+
 
 /* Loads an ELF executable from FILE_NAME into the current thread.
    Stores the executable's entry point into *EIP
@@ -464,8 +467,8 @@ setup_stack (void **esp, int argc, char *argv[])
 
       	/* List of addresses to each argument in argv */
       	uint32_t *argv_ptrs[argc];
-      	int argv_len = argc - 1;
-      	for(int i = 0; i < argv_len; i++) {
+      	int last_elem = argc - 1;
+      	for(int i = last_elem; i >= 0; i--) {
       		// printf("esp: %p\n", &(*esp));
       		/* Allocate space for the string */
       		*esp -= (sizeof(char) * strlen(argv[i]) + 1);
@@ -475,18 +478,18 @@ setup_stack (void **esp, int argc, char *argv[])
       		argv_ptrs[i] = (uint32_t *) *esp;
       	}
 
-      	/* For best performance we round the stack pointer down to a multiple of 4 before we push */
+      	/* Move down 4 before pushing */
       	*esp -= 4;
       	/* Push a null pointer sentinel */
       	(*(int *)(*esp)) = 0;
 
       	/* Add the addresses to the stack */
-      	*esp -= 4;
-      	for(int i = 0; i < argv_len; i++) {
+      	for(int i = last_elem; i >= 0; i--)  {
+          *esp -= 4;
       		(*(uint32_t **)(*esp)) = argv_ptrs[i];
-      		*esp -= 4;
       	}
 
+        *esp -= 4;
       	/* Push a pointer to argv[0]  */
       	(*(uintptr_t **)(*esp)) = *esp + 4;
 

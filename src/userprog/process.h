@@ -8,6 +8,4 @@ int process_wait (tid_t);
 void process_exit (void);
 void process_activate (void);
 
-static void populate_argv(const char * file_name, int argc, char *argv[]);
-
 #endif /* userprog/process.h */

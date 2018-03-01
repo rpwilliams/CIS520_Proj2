@@ -4,11 +4,15 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "pagedir.h"
 
 static void syscall_handler (struct intr_frame *);
 void check_valid_ptr (const void *ptr);
 void check_valid_buffer(void *buffer, unsigned size);
 void get_arguments(struct intr_frame *f, int *args, int n);
+
+/* A lock to ensure multiple processes can't edit a file at the same time */
+struct lock* file_lock;
 
 void
 syscall_init (void) 
@@ -57,6 +61,16 @@ syscall_handler (struct intr_frame *f UNUSED)
   		break;
   	/* Write to a file. */
   	case SYS_WRITE:
+  		/* Get the 3 arguments for write (filename, buffer, and size) off the stack */ 
+  		get_arguments(f, &args[0], 3);
+
+  		/* Ensure the buffer is valid */
+  		check_valid_buffer((void*) args[1], args[2]);
+
+  		/* Transform buffer from user virtual address to kernel virtual address */
+  		args[1] = (int) pagedir_get_page(thread_current()->pagedir, (const void*) args[1]);		
+
+  		f->eax = write(args[0], (const void *) args[1], (unsigned) args[2]);
   		break;
   	/* Change position in a file. */
   	case SYS_SEEK:
@@ -117,9 +131,26 @@ void exit(int status) {
 
 // }
 
-// int write (int fd, const void *buffer, unsigned size) {
+/* Writes to a file Returns size of file we wrote. */
+int write (int fd, const void *buffer, unsigned size) {
+	/* If the file descriptor is standard output,
+	 we write the buffer for the entire length of size */
+	if(fd == STDOUT_FILENO) {
+		/* Print the buffer to the console */
+		putbuf(buffer, size);
+		return size;
+	}
+	else if(fd == STDIN_FILENO) {
+		return 0; // Error
+	}
+	else {
+		// lock_acquire(&file_lock);
+		// TODO: All other cases
+		return 0;
 
-// }
+	}
+	
+}
 
 // void seek (int fd, unsigned position) {
 
@@ -164,3 +195,4 @@ void get_arguments(struct intr_frame *f, int *args, int n) {
 		args[i] = *arg;
 	}
 }
+
