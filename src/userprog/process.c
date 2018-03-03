@@ -20,6 +20,11 @@
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
+static void check_tid (struct thread *t, void *aux UNUSED);
+
+
+static tid_t current_tid;
+static struct thread* found_thread;
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -42,10 +47,25 @@ process_execute (const char *file_name)
    char *save_ptr;
    char *program_name = strtok_r((char *)file_name, " ", &save_ptr);
 
+  /* Ensure name is valid */
+  if(program_name == NULL) {
+    return -1;
+  }
+
   /* Create a new thread to execute program_name */
   tid = thread_create (program_name, PRI_DEFAULT, start_process, fn_copy);
-  if (tid == TID_ERROR)
+
+  if (tid == TID_ERROR) {
     palloc_free_page (fn_copy); 
+  }
+  else {
+    /* Add this thread to the list of child threads if the thread is valid */
+    current_tid = tid;
+    enum intr_level old_level = intr_disable();
+    thread_foreach(*check_tid, NULL);
+    list_push_front(&thread_current()->children_list, &found_thread->child_elem);
+    intr_set_level (old_level);
+  }
   return tid;
 }
 
@@ -95,7 +115,7 @@ process_wait (tid_t child_tid UNUSED)
   /* The parent (current) process */
   struct thread* parent = thread_current();
   /* This parent's child process */
-  struct thread* child;
+  struct thread* child = NULL;
 
   if(list_empty(&parent->children_list)) {
     return -1;
@@ -570,4 +590,13 @@ populate_argv(const char * file_name, int argc, char *argv[]) {
  	argc++;
   }
 }
+
+/* Find the thread that matches a tid */
+static void check_tid (struct thread *t, void *aux UNUSED) {
+  if(t->tid == current_tid) {
+      found_thread = t;
+  }
+}
+
+
 

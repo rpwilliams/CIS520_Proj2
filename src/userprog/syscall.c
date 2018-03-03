@@ -24,10 +24,11 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {  
+  printf ("system call!\n");
   int args[3];
   /* Ensure user provided pointer is valid/safe */
   check_valid_ptr((const void *) f->esp);
-  printf ("system call!\n");
+  
   /* Based on what the system call number the
    stack pointer is point to, make an appropriate system call */
   switch(*(int *) f->esp) {
@@ -38,6 +39,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   	case SYS_EXIT:
   		// printf("in exit");
   		get_arguments(f, &args[0], 1);
+      puts(args[0]);
   		exit(args[0]);
   		break;
   	/* Start another process. */
@@ -46,6 +48,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   	/* Wait for a child process to die. */
   	case SYS_WAIT:
       get_arguments(f, &args[0], 1);
+      puts(args[0]);
       f->eax = wait((pid_t) args[0]);
   		break;
   	/* Create a file. */
@@ -65,17 +68,15 @@ syscall_handler (struct intr_frame *f UNUSED)
   		break;
   	/* Write to a file. */
   	case SYS_WRITE:
-  		// printf("in write");
   		/* Get the 3 arguments for write (filename, buffer, and size) off the stack */ 
   		get_arguments(f, &args[0], 3);
-
   		/* Ensure the buffer is valid */
-  		// check_valid_buffer((void*) args[1], args[2]);
+  		check_valid_buffer((void*) args[1], args[2]);
 
   		/* Transform buffer from user virtual address to kernel virtual address */
-  		// args[1] = (int) pagedir_get_page(thread_current()->pagedir, (const void*) args[1]);		
+  		args[1] = (int) pagedir_get_page(thread_current()->pagedir, (const void*) args[1]);		
 
-  		// f->eax = write(args[0], (const void *) args[1], (unsigned) args[2]);
+  		f->eax = write(args[0], (const void *) args[1], (unsigned) args[2]);
   		break;
   	/* Change position in a file. */
   	case SYS_SEEK:
@@ -141,13 +142,14 @@ int wait (pid_t pid) {
 
 // }
 
-/* Writes to a file Returns size of file we wrote. */
+/* Writes to a file. Returns size of file we wrote. */
 int write (int fd, const void *buffer, unsigned size) {
 	/* If the file descriptor is standard output,
 	 we write the buffer for the entire length of size */
 	// lock_acquire(&file_lock);
 	if(fd == STDOUT_FILENO) {
 		/* Print the buffer to the console */
+    puts("We writin");
 		putbuf(buffer, size);
 		return size;
 	}
