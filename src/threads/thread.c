@@ -201,7 +201,7 @@ thread_create (const char *name, int priority,
   thread_unblock (t);
 
   /*
-	Yield if the higher priority is ready as soon as the thread is created
+  Yield if the higher priority is ready as soon as the thread is created
   */
   old_level = intr_disable();
   priority_check();
@@ -317,7 +317,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-  	list_insert_ordered(&ready_list, &cur->elem, priority_order, NULL); 
+    list_insert_ordered(&ready_list, &cur->elem, priority_order, NULL); 
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -351,7 +351,7 @@ thread_set_priority (int new_priority)
   int old_priority = thread_current ()->priority;
 
   /* If the head of this thread's list of donated priorities is a bigger priority, 
-  		then change this thread's priority to the head's priority */
+      then change this thread's priority to the head's priority */
   if(!list_empty(&thread_current()->donated_list)) {
     int max_list_priority = list_entry(list_front(&thread_current()->donated_list), struct thread, donation_elem)->priority;
     if(thread_current ()->priority < max_list_priority) {
@@ -360,7 +360,7 @@ thread_set_priority (int new_priority)
   }
 
   /* If the donated list had a bigger priority that we set this thread's priority to, 
-  		then donate the priority to child threads */
+      then donate the priority to child threads */
   if(thread_current ()->priority > old_priority) {
     // donation(thread_current(), thread_current()->waiting_lock);
     donation();
@@ -393,20 +393,20 @@ thread_get_priority (void)
 /* Compare the priority of the current thread and the first element in the ready list
     and yield accordingly */
 void priority_check(void) {
-	enum intr_level old_level = intr_disable ();
+  enum intr_level old_level = intr_disable ();
 
-	if(!list_empty(&ready_list)) {
-	    /* The first element of the ready list, which is the highest priority in the list */
-	    struct thread *t = list_entry(list_front(&ready_list), struct thread, elem); 
+  if(!list_empty(&ready_list)) {
+      /* The first element of the ready list, which is the highest priority in the list */
+      struct thread *t = list_entry(list_front(&ready_list), struct thread, elem); 
 
-	    /* If the current thread's priority is smaller than the first element
-	       in the ready list's priority, then yield */
-	    if (thread_current ()->priority < t->priority) {
-	      thread_yield ();
-	    }
-	}
+      /* If the current thread's priority is smaller than the first element
+         in the ready list's priority, then yield */
+      if (thread_current ()->priority < t->priority) {
+        thread_yield ();
+      }
+  }
 
-	intr_set_level(old_level);
+  intr_set_level(old_level);
 }
 
 /* Sets the current thread's nice value to NICE. */
@@ -542,6 +542,7 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init(&t->fds);
   /* Initialize the alive semaphore */
   sema_init(&t->alive_sema, 0);
+  t->exit_status = -1;
 
   #endif
   /* Initialize the timer semaphore */
@@ -689,15 +690,15 @@ donation() {
   struct lock* l = thread_current()->waiting_lock;
   int depth = 0;
   while(l && depth < MAX_DEPTH) { 
-  	if(l->holder != NULL && l->holder->priority < t->priority) {
-  		l->holder->priority = t->priority;
-	    t = l->holder;
-	    l = t->waiting_lock;
-	    depth++;
-  	}
-  	else {
-  		return;
-  	}
+    if(l->holder != NULL && l->holder->priority < t->priority) {
+      l->holder->priority = t->priority;
+      t = l->holder;
+      l = t->waiting_lock;
+      depth++;
+    }
+    else {
+      return;
+    }
   }
 }
 

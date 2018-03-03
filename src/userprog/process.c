@@ -112,6 +112,10 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
+  // while(true) {
+
+  // }
+  // return -1;
   /* The parent (current) process */
   struct thread* parent = thread_current();
   /* This parent's child process */
@@ -133,7 +137,7 @@ process_wait (tid_t child_tid UNUSED)
   }
 
   /* Make sure child is not null */
-  if(child != NULL) {
+  if(child == NULL) {
     return -1;
   }
   
@@ -287,8 +291,9 @@ load (const char *file_name, void (**eip) (void), void **esp)
   /* The number of strings pointed to by argv */
   int argc = 0;
   
-  /* Put the arguments into the argument array */
+  /* Put the arguments into the argument array. This has been verified to work. */
   populate_argv(file_name, argc, argv);
+
 
   /* Open executable file. */
   file = filesys_open (argv[0]);
@@ -307,7 +312,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
       || ehdr.e_phentsize != sizeof (struct Elf32_Phdr)
       || ehdr.e_phnum > 1024) 
     {
-      printf ("load: %s: error loading executable\n", file_name);
+      printf ("load: %s: error loading executable\n", argv[0]);
       goto done; 
     }
 
@@ -512,13 +517,15 @@ setup_stack (void **esp, int argc, char *argv[])
 
       	/* List of addresses to each argument in argv */
       	uint32_t *argv_ptrs[argc];
-      	int last_elem = argc - 1;
-      	for(int i = last_elem; i >= 0; i--) {
+
+        /* Add the command line arguments to the stack */
+      	// int last_elem = argc - 1;
+      	for(int i = argc - 1; i >= 0; i--) {
       		// printf("esp: %p\n", &(*esp));
       		/* Allocate space for the string */
-      		*esp -= (sizeof(char) * strlen(argv[i]) + 1);
+      		*esp = *esp - sizeof(char) * (strlen(argv[i])+1);
       		/* Copy the string (argv[i]) to the stack (*esp) */
-      		memcpy(*esp, argv[i], sizeof(char)*strlen(argv[i]) + 1);
+      		memcpy(*esp, argv[i], sizeof(char) * (strlen(argv[i])+1));
       		/* Add the string's address to the list */
       		argv_ptrs[i] = (uint32_t *) *esp;
       	}
@@ -530,7 +537,7 @@ setup_stack (void **esp, int argc, char *argv[])
 
         *esp -= 4;
       	/* Add the addresses to the stack */
-      	for(int i = last_elem; i >= 0; i--)  {      
+      	for(int i = argc - 1; i >= 0; i--)  {      
       		(*(uint32_t **)(*esp)) = argv_ptrs[i];
           *esp -= 4;
       	}
@@ -585,9 +592,8 @@ populate_argv(const char * file_name, int argc, char *argv[]) {
   char *save_ptr;
 
   for (token = strtok_r ((char *) file_name, " ", &save_ptr); token != NULL; token = strtok_r (NULL, " ", &save_ptr)) {
- 	// printf ("'%s'\n", token);
- 	argv[argc] = token;
- 	argc++;
+   	argv[argc] = token;
+   	argc++;
   }
 }
 

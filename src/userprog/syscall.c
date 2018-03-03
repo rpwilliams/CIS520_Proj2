@@ -39,7 +39,6 @@ syscall_handler (struct intr_frame *f UNUSED)
   	case SYS_EXIT:
   		// printf("in exit");
   		get_arguments(f, &args[0], 1);
-      puts(args[0]);
   		exit(args[0]);
   		break;
   	/* Start another process. */
@@ -48,7 +47,6 @@ syscall_handler (struct intr_frame *f UNUSED)
   	/* Wait for a child process to die. */
   	case SYS_WAIT:
       get_arguments(f, &args[0], 1);
-      puts(args[0]);
       f->eax = wait((pid_t) args[0]);
   		break;
   	/* Create a file. */
@@ -207,6 +205,7 @@ void get_arguments(struct intr_frame *f, int *args, int n) {
 		arg = (int*) f->esp + i + 1;
 		check_valid_ptr((const void*) arg);
 		args[i] = *arg;
+    // printf(i, *arg, "ARGS[%d]: %d");
 	}
 }
 
