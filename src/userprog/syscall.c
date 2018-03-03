@@ -46,7 +46,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   	/* Wait for a child process to die. */
   	case SYS_WAIT:
       get_arguments(f, &args[0], 1);
-      // f->eax = wait((pid_t) args[0]);
+      f->eax = wait((pid_t) args[0]);
   		break;
   	/* Create a file. */
   	case SYS_CREATE:
@@ -109,7 +109,7 @@ void exit(int status) {
 	/* Print process name and exit status */
 	printf("%s: (%d)\n", thread_current()->name, status);
   /* Set the exit status of the current thread */
-  // thread_current()->exit_status = status;
+  thread_current()->exit_status = status;
 	thread_exit();
 }
 
