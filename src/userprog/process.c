@@ -497,6 +497,7 @@ setup_stack (void **esp, int argc, char *argv[])
       	*esp -= 4;
       	(*(int *)(*esp)) = argc;
 
+        *esp -= 4;
       	/* Push return address placeholder (0 since no actual return address) */
       	(*(int *)(*esp)) = 0;
       }
@@ -544,3 +545,4 @@ populate_argv(const char * file_name, int argc, char *argv[]) {
  	argc++;
   }
 }
+

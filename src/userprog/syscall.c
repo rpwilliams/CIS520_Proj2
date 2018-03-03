@@ -4,7 +4,8 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
-#include "pagedir.h"
+#include "userprog/pagedir.h"
+#include "userprog/process.h"
 
 static void syscall_handler (struct intr_frame *);
 void check_valid_ptr (const void *ptr);
@@ -44,6 +45,8 @@ syscall_handler (struct intr_frame *f UNUSED)
   		break;
   	/* Wait for a child process to die. */
   	case SYS_WAIT:
+      get_arguments(f, &args[0], 1);
+      f->eax = wait((pid_t) args[0]);
   		break;
   	/* Create a file. */
   	case SYS_CREATE:
@@ -112,9 +115,9 @@ void exit(int status) {
 
 // }
 
-// int wait (pid_t pid) {
-
-// }
+int wait (pid_t pid) {
+  return process_wait(pid);
+}
 
 // bool create (const char *file, unsigned initial_size) {
 
