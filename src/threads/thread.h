@@ -120,6 +120,14 @@ struct thread
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
+    /* The list of this thread's children */
+    struct list children_list;
+    /* List element for the children list */
+    struct list_elem child_elem;
+    /* The thread's exit status */
+    int exit_status;
+    /* Indicates if the child is not dead */
+    struct semaphore* alive;
 #endif
 
     /* Owned by thread.c. */

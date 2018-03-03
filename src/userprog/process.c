@@ -92,10 +92,37 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  /* This will need to be changed eventually */
-  while(true) {
+  // /* The parent (current) process */
+  // struct thread* parent = thread_current();
+  // /* This parent's child process */
+  // struct thread* child;
 
-  }
+  // if(list_empty(&parent->children_list)) {
+  //   return -1;
+  // }
+
+  // /* Look through the thread's list of children for a child with child_tid */
+  // //e != list_end(&parent->children_list) e = list_next(e)
+  // struct list_elem* e;
+  // for(e = list_front(&parent->children_list); e != NULL; e = e->next) {
+  //   struct thread *t = list_entry(e, struct thread, child_elem);
+  //   if(t->tid == child_tid) {
+  //     child = t;
+  //     break;
+  //   }
+  // }
+
+  // /* Make sure child is not null */
+  // if(child != NULL) {
+  //   return -1;
+  // }
+  
+  // list_remove(&child->child_elem);
+
+  // sema_down(&child->alive);
+
+  /* Return the exit status of the child when it is terminated */
+  // return child->exit_status;
 
   return -1;
 }

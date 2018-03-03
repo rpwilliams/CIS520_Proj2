@@ -46,7 +46,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   	/* Wait for a child process to die. */
   	case SYS_WAIT:
       get_arguments(f, &args[0], 1);
-      f->eax = wait((pid_t) args[0]);
+      // f->eax = wait((pid_t) args[0]);
   		break;
   	/* Create a file. */
   	case SYS_CREATE:
@@ -73,9 +73,9 @@ syscall_handler (struct intr_frame *f UNUSED)
   		// check_valid_buffer((void*) args[1], args[2]);
 
   		/* Transform buffer from user virtual address to kernel virtual address */
-  		args[1] = (int) pagedir_get_page(thread_current()->pagedir, (const void*) args[1]);		
+  		// args[1] = (int) pagedir_get_page(thread_current()->pagedir, (const void*) args[1]);		
 
-  		f->eax = write(args[0], (const void *) args[1], (unsigned) args[2]);
+  		// f->eax = write(args[0], (const void *) args[1], (unsigned) args[2]);
   		break;
   	/* Change position in a file. */
   	case SYS_SEEK:
@@ -108,6 +108,8 @@ syscall_handler (struct intr_frame *f UNUSED)
 void exit(int status) {
 	/* Print process name and exit status */
 	printf("%s: (%d)\n", thread_current()->name, status);
+  /* Set the exit status of the current thread */
+  // thread_current()->exit_status = status;
 	thread_exit();
 }
 
