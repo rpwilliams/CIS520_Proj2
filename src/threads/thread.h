@@ -127,7 +127,7 @@ struct thread
     /* The thread's exit status */
     int exit_status;
     /* Indicates if the child is not dead */
-    struct semaphore* alive;
+    struct semaphore alive_sema;
 #endif
 
     /* Owned by thread.c. */

@@ -287,10 +287,11 @@ thread_exit (void)
 {
   ASSERT (!intr_context ());
 
-  /* Tell the parent when the child is dead */
-  // sema_up(&thread_current()->alive);
+  
 
 #ifdef USERPROG
+  /* Tell the parent when the child is dead */
+  sema_up(&thread_current()->alive_sema);
   process_exit ();
 #endif
 
@@ -539,12 +540,13 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init(&t->children_list);
   /* Initialize the list of file descriptors */
   list_init(&t->fds);
+  /* Initialize the alive semaphore */
+  sema_init(&t->alive_sema, 0);
 
   #endif
   /* Initialize the timer semaphore */
   sema_init(&t->timer_sema, 0);
-  /* Initialize the alive semaphore */
-  sema_init(&t->alive, 0);
+  
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
