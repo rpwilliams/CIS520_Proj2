@@ -256,7 +256,7 @@ struct Elf32_Phdr
 /* The maximum size of command line arguments */
 #define MAX_ARGS_SIZE 25
 
-static void populate_argv(const char * file_name, int argc, char *argv[]);
+static int populate_argv(const char * file_name, int argc, char *argv[]);
 
 static bool setup_stack (void **esp, int argc, char *argv[]);
 static bool validate_segment (const struct Elf32_Phdr *, struct file *);
@@ -292,7 +292,7 @@ load (const char *file_name, void (**eip) (void), void **esp)
   int argc = 0;
   
   /* Put the arguments into the argument array. This has been verified to work. */
-  populate_argv(file_name, argc, argv);
+  argc=populate_argv(file_name, argc, argv);
 
 
   /* Open executable file. */
@@ -584,7 +584,7 @@ install_page (void *upage, void *kpage, bool writable)
 	For example, if the command was "echo x", argv would become ['echo', 'x'].
 	strtok_r is implemented in lib/string.c.
  */
-static void
+static int
 populate_argv(const char * file_name, int argc, char *argv[]) {
   /* A string's token, which will be extracted from strtok_r */
   char *token;
@@ -595,6 +595,7 @@ populate_argv(const char * file_name, int argc, char *argv[]) {
    	argv[argc] = token;
    	argc++;
   }
+  return argc;
 }
 
 /* Find the thread that matches a tid */

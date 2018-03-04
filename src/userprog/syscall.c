@@ -24,7 +24,7 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {  
-  printf ("system call!\n");
+  //printf ("system call!\n");
   int args[3];
   /* Ensure user provided pointer is valid/safe */
   check_valid_ptr((const void *) f->esp);
@@ -106,7 +106,7 @@ syscall_handler (struct intr_frame *f UNUSED)
    values indicate errors. */
 void exit(int status) {
 	/* Print process name and exit status */
-	printf("%s: (%d)\n", thread_current()->name, status);
+	printf("%s: exit(%d)\n", thread_current()->name, status);
   /* Set the exit status of the current thread */
   thread_current()->exit_status = status;
 	thread_exit();
@@ -147,7 +147,7 @@ int write (int fd, const void *buffer, unsigned size) {
 	// lock_acquire(&file_lock);
 	if(fd == STDOUT_FILENO) {
 		/* Print the buffer to the console */
-    puts("We writin");
+    //puts("We writin");
 		putbuf(buffer, size);
 		return size;
 	}
