@@ -4,8 +4,11 @@
 #include "threads/interrupt.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/init.h"
 #include "userprog/pagedir.h"
 #include "userprog/process.h"
+#include "devices/shutdown.h"
+
 
 static void syscall_handler (struct intr_frame *);
 void check_valid_ptr (const void *ptr);
@@ -34,6 +37,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   switch(*(int *) f->esp) {
   	/* Halt the operating system. */
   	case SYS_HALT:
+      halt();
   		break;
   	/* Terminate this process. */
   	case SYS_EXIT:
@@ -90,10 +94,10 @@ syscall_handler (struct intr_frame *f UNUSED)
  
 }
 
-
-// void halt(void) {
-
-// }
+/* Terminates pintos -- rarely used */
+void halt(void) {
+  shutdown_power_off(); 
+}
 
 
 /* Terminates the current user program, returning status to the kernel. 
