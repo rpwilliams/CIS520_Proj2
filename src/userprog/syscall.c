@@ -8,6 +8,8 @@
 #include "userprog/pagedir.h"
 #include "userprog/process.h"
 #include "devices/shutdown.h"
+#include "filesys/file.h"
+#include "filesys/filesys.h"
 
 
 static void syscall_handler (struct intr_frame *);
@@ -16,11 +18,12 @@ void check_valid_buffer(void *buffer, unsigned size);
 void get_arguments(struct intr_frame *f, int *args, int n);
 
 /* A lock to ensure multiple processes can't edit a file at the same time */
-struct lock* file_lock;
+struct lock file_lock;
 
 void
 syscall_init (void) 
 {
+  lock_init(&file_lock);
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
 }
 
@@ -54,9 +57,17 @@ syscall_handler (struct intr_frame *f UNUSED)
   		break;
   	/* Create a file. */
   	case SYS_CREATE:
+      get_arguments(f, &args[0], 2);
+      /* Transforms file from user virtual address to kernel virtual address */
+      args[0] = (int) pagedir_get_page(thread_current()->pagedir, (const void*) args[0]);
+      f->eax = create((const char*) args[0], (unsigned) args[1]);
   		break;
   	/* Delete a file. */
   	case SYS_REMOVE:
+      get_arguments(f, &args[0], 1);
+      /* Transforms file from user virtual address to kernel virtual address */
+      args[0] = (int) pagedir_get_page(thread_current()->pagedir, (const void*) args[0]);
+      f->eax = remove((const char*) args[0]);
   		break;
   	/* Open a file. */
   	case SYS_OPEN:
@@ -120,13 +131,23 @@ int wait (pid_t pid) {
   return process_wait(pid);
 }
 
-// bool create (const char *file, unsigned initial_size) {
+/* Create a new file, and return true if successful */
+bool create (const char *file, unsigned initial_size) {
+  /* Use a lock to avoid race conditions */
+  lock_acquire(&file_lock);
+  bool success = filesys_create(file, initial_size);
+  lock_release(&file_lock);
+  return success;
+}
 
-// }
-
-// bool remove (const char *file) {
-
-// }
+/* Deletes the file called file, returns true if successful */
+bool remove (const char *file) {
+  /* Use a lock to avoid race conditions */
+  lock_acquire(&file_lock);
+  bool success = filesys_remove(file);
+  lock_release(&file_lock);
+  return success;
+}
 
 // int open (const char *file) {
 
