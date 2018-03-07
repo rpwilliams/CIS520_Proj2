@@ -24,7 +24,7 @@ syscall_init (void)
 static void
 syscall_handler (struct intr_frame *f UNUSED) 
 {  
-  //printf ("system call!\n");
+  /* The stack arguments -> we will only ever need up to 3 */
   int args[3];
   /* Ensure user provided pointer is valid/safe */
   check_valid_ptr((const void *) f->esp);
@@ -37,7 +37,6 @@ syscall_handler (struct intr_frame *f UNUSED)
   		break;
   	/* Terminate this process. */
   	case SYS_EXIT:
-  		// printf("in exit");
   		get_arguments(f, &args[0], 1);
   		exit(args[0]);
   		break;
@@ -70,10 +69,8 @@ syscall_handler (struct intr_frame *f UNUSED)
   		get_arguments(f, &args[0], 3);
   		/* Ensure the buffer is valid */
   		check_valid_buffer((void*) args[1], args[2]);
-
   		/* Transform buffer from user virtual address to kernel virtual address */
   		args[1] = (int) pagedir_get_page(thread_current()->pagedir, (const void*) args[1]);		
-
   		f->eax = write(args[0], (const void *) args[1], (unsigned) args[2]);
   		break;
   	/* Change position in a file. */
@@ -86,7 +83,6 @@ syscall_handler (struct intr_frame *f UNUSED)
   	case SYS_CLOSE:
   		break;
   	default:
-  		// printf("no man's land");
   		exit(-1);
   		break;
 
@@ -147,7 +143,6 @@ int write (int fd, const void *buffer, unsigned size) {
 	// lock_acquire(&file_lock);
 	if(fd == STDOUT_FILENO) {
 		/* Print the buffer to the console */
-    //puts("We writin");
 		putbuf(buffer, size);
 		return size;
 	}
@@ -158,7 +153,6 @@ int write (int fd, const void *buffer, unsigned size) {
 		// lock_acquire(&file_lock);
 		// TODO: All other cases
 		return 0;
-
 	}
 	// lock_release(&file_lock);
 	
@@ -205,7 +199,6 @@ void get_arguments(struct intr_frame *f, int *args, int n) {
 		arg = (int*) f->esp + i + 1;
 		check_valid_ptr((const void*) arg);
 		args[i] = *arg;
-    // printf(i, *arg, "ARGS[%d]: %d");
 	}
 }
 

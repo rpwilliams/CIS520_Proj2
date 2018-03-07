@@ -22,9 +22,10 @@ static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 static void check_tid (struct thread *t, void *aux UNUSED);
 
-
-static tid_t current_tid;
-static struct thread* found_thread;
+/* The TID of the new thread we create in process_execute, used in check_tid */
+static tid_t new_thread_tid;
+/* The thread that matches the TID of new_thread_tid */
+static struct thread* new_thread;
 
 /* Starts a new thread running a user program loaded from
    FILENAME.  The new thread may be scheduled (and may even exit)
@@ -43,7 +44,7 @@ process_execute (const char *file_name)
     return TID_ERROR;
   strlcpy (fn_copy, file_name, PGSIZE);
 
-   /* Gets the first word (argv[0]), which is the program name */
+   /* Gets the first argument (argv[0]), which is the program we want to execute */
    char *save_ptr;
    char *program_name = strtok_r((char *)file_name, " ", &save_ptr);
 
@@ -54,16 +55,20 @@ process_execute (const char *file_name)
 
   /* Create a new thread to execute program_name */
   tid = thread_create (program_name, PRI_DEFAULT, start_process, fn_copy);
+  new_thread_tid = tid;
 
+  /* Check if the thread is valid */
   if (tid == TID_ERROR) {
     palloc_free_page (fn_copy); 
   }
   else {
-    /* Add this thread to the list of child threads if the thread is valid */
-    current_tid = tid;
+    /* Disable interrupts, as required by thread_foreach  */
     enum intr_level old_level = intr_disable();
+    /* Find the thread that matches the TID of the new thread we just created,
+       and set it to new_thread */
     thread_foreach(*check_tid, NULL);
-    list_push_front(&thread_current()->children_list, &found_thread->child_elem);
+    /* Finally, add the new thread we created to the current thread's list of children */
+    list_push_front(&thread_current()->children_list, &new_thread->child_elem);
     intr_set_level (old_level);
   }
   return tid;
@@ -112,21 +117,17 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  // while(true) {
-
-  // }
-  // return -1;
   /* The parent (current) process */
   struct thread* parent = thread_current();
   /* This parent's child process */
   struct thread* child = NULL;
 
+  /* Ensure there is a child we need to wait for */
   if(list_empty(&parent->children_list)) {
     return -1;
   }
 
   /* Look through the thread's list of children for a child with child_tid */
-  //e != list_end(&parent->children_list) e = list_next(e)
   struct list_elem* e;
   for(e = list_front(&parent->children_list); e != NULL; e = e->next) {
     struct thread *t = list_entry(e, struct thread, child_elem);
@@ -136,13 +137,16 @@ process_wait (tid_t child_tid UNUSED)
     }
   }
 
-  /* Make sure child is not null */
+  /* Ensure child is not null */
   if(child == NULL) {
     return -1;
   }
   
+  /* Remove the child we are waiting on from the list */
   list_remove(&child->child_elem);
 
+  /* Make the parent wait until the child is done executing
+     (essentially acts like a condition variable) */
   sema_down(&child->alive_sema);
 
   /* Return the exit status of the child when it is terminated */
@@ -291,8 +295,8 @@ load (const char *file_name, void (**eip) (void), void **esp)
   /* The number of strings pointed to by argv */
   int argc = 0;
   
-  /* Put the arguments into the argument array. This has been verified to work. */
-  argc=populate_argv(file_name, argc, argv);
+  /* Put the arguments into the argument array, and updated argc */
+  argc = populate_argv(file_name, argc, argv);
 
 
   /* Open executable file. */
@@ -519,11 +523,10 @@ setup_stack (void **esp, int argc, char *argv[])
       	uint32_t *argv_ptrs[argc];
 
         /* Add the command line arguments to the stack */
-      	// int last_elem = argc - 1;
-      	for(int i = argc - 1; i >= 0; i--) {
-      		// printf("esp: %p\n", &(*esp));
+      	int last_elem = argc - 1;
+      	for(int i = last_elem; i >= 0; i--) {
       		/* Allocate space for the string */
-      		*esp = *esp - sizeof(char) * (strlen(argv[i])+1);
+      		*esp -= sizeof(char) * (strlen(argv[i])+1);
       		/* Copy the string (argv[i]) to the stack (*esp) */
       		memcpy(*esp, argv[i], sizeof(char) * (strlen(argv[i])+1));
       		/* Add the string's address to the list */
@@ -537,7 +540,7 @@ setup_stack (void **esp, int argc, char *argv[])
 
         *esp -= 4;
       	/* Add the addresses to the stack */
-      	for(int i = argc - 1; i >= 0; i--)  {      
+      	for(int i = last_elem; i >= 0; i--)  {      
       		(*(uint32_t **)(*esp)) = argv_ptrs[i];
           *esp -= 4;
       	}
@@ -583,6 +586,7 @@ install_page (void *upage, void *kpage, bool writable)
 /* Adds each of the command line arguments to the list of command line arguments, argv.
 	For example, if the command was "echo x", argv would become ['echo', 'x'].
 	strtok_r is implemented in lib/string.c.
+  IMPORTANT: Returns the updated argc 
  */
 static int
 populate_argv(const char * file_name, int argc, char *argv[]) {
@@ -598,10 +602,10 @@ populate_argv(const char * file_name, int argc, char *argv[]) {
   return argc;
 }
 
-/* Find the thread that matches a tid */
+/* Find the thread that matches a TID, used as a paramater of thead_foreach */
 static void check_tid (struct thread *t, void *aux UNUSED) {
-  if(t->tid == current_tid) {
-      found_thread = t;
+  if(t->tid == new_thread_tid) {
+      new_thread = t;
   }
 }
 
