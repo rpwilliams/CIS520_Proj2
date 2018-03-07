@@ -8,6 +8,7 @@
 #include "userprog/pagedir.h"
 #include "userprog/process.h"
 #include "devices/shutdown.h"
+#include "devices/input.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
 
@@ -77,13 +78,20 @@ syscall_handler (struct intr_frame *f UNUSED)
   		break;
   	/* Read from a file. */
   	case SYS_READ:
+      /* Get the 3 arguments for read (filename, buffer, and size) off the stack */ 
+      get_arguments(f, &args[0], 3);
+      /* Ensure the buffer is valid */
+      check_valid_buffer((void*) args[1], (unsigned) args[2]);
+      /* Transform buffer from user virtual address to kernel virtual address */
+      args[1] = (int) pagedir_get_page(thread_current()->pagedir, (const void*) args[1]);   
+      f->eax = read(args[0], (void *) args[1], (unsigned) args[2]);
   		break;
   	/* Write to a file. */
   	case SYS_WRITE:
   		/* Get the 3 arguments for write (filename, buffer, and size) off the stack */ 
   		get_arguments(f, &args[0], 3);
   		/* Ensure the buffer is valid */
-  		check_valid_buffer((void*) args[1], args[2]);
+  		check_valid_buffer((void*) args[1], (unsigned) args[2]);
   		/* Transform buffer from user virtual address to kernel virtual address */
   		args[1] = (int) pagedir_get_page(thread_current()->pagedir, (const void*) args[1]);		
   		f->eax = write(args[0], (const void *) args[1], (unsigned) args[2]);
@@ -157,15 +165,27 @@ bool remove (const char *file) {
 
 // }
 
-// int read (int fd, void *buffer, unsigned size) {
-
-// }
+/* Reads size bytes from the file open as fd into buffer.
+   Returns the number of bytes actually read (0 at end of file)
+   or -1 if the file could not be read */
+int read (int fd, void *buffer, unsigned size) {
+  // lock_acquire(&file_lock);
+  if(fd == STDIN_FILENO) {
+    uint8_t* local_buffer = (uint8_t*) buffer;
+    for(unsigned i = 0; i < size; i++) {
+      local_buffer[i] = input_getc();
+    }
+    return size;
+  }
+  return 0;
+  // lock_release(&file_lock);
+}
 
 /* Writes to a file. Returns size of file we wrote. */
 int write (int fd, const void *buffer, unsigned size) {
 	/* If the file descriptor is standard output,
 	 we write the buffer for the entire length of size */
-	// lock_acquire(&file_lock);
+	//lock_acquire(&file_lock);
 	if(fd == STDOUT_FILENO) {
 		/* Print the buffer to the console */
 		putbuf(buffer, size);
