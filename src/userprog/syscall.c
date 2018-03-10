@@ -19,6 +19,7 @@ void check_valid_ptr (const void *ptr);
 void check_valid_buffer(void *buffer, unsigned size);
 void get_arguments(struct intr_frame *f, int *args, int n);
 int get_kernel_ptr(const void *user_ptr);
+struct file* get_file_from_list(int fd);
 
 /* The bottom of the user virtual address space */
 #define MIN_VIRTUAL_ADDR ((void *) 0x08048000)
@@ -31,7 +32,7 @@ struct lock file_lock;
 struct file_entry {
   struct file *file;
   int fd;
-  struct list_elem elem;
+  struct list_elem file_elem;
 };
 
 void
@@ -114,6 +115,9 @@ syscall_handler (struct intr_frame *f UNUSED)
   		break;
   	/* Change position in a file. */
   	case SYS_SEEK:
+      get_arguments(f, &args[0], 2);
+      /* Returns result of seek in EAX register */
+      seek(args[0], (unsigned) args[1]);
   		break;
   	/* Report current position in a file. */
   	case SYS_TELL:
@@ -191,7 +195,7 @@ int open (const char *file) {
   file_entry->fd = fd;
   thread_current()->fd++;
   /* Add the file_entry to the list of file entries */
-  list_push_back(&thread_current()->fd_list, &file_entry->elem);
+  list_push_back(&thread_current()->fd_list, &file_entry->file_elem);
 
   lock_release(&file_lock);
   return fd;
@@ -238,9 +242,20 @@ int write (int fd, const void *buffer, unsigned size) {
 	return 0;
 }
 
-// void seek (int fd, unsigned position) {
 
-// }
+/* Changes the next byte to be read or written in open file fd to position,
+   expressed in bytes from the beginning of the file */
+void seek (int fd, unsigned position) {
+  lock_acquire(&file_lock);
+  struct file *f = get_file_from_list(fd);
+
+  if(f == NULL) {
+    lock_release(&file_lock);
+    return;
+  }
+  file_seek(f, position);
+  lock_release(&file_lock);
+}
 
 // unsigned tell (int fd) {
 
@@ -293,5 +308,18 @@ void get_arguments(struct intr_frame *f, int *args, int n) {
 		check_valid_ptr((const void*) arg);
 		args[i] = *arg;
 	}
+}
+
+/* Gets a file from the list of file_entrys based off the file descriptor */
+struct file* get_file_from_list(int fd) {
+  struct list_elem *e;
+
+  for(e  = list_front(&thread_current()->fd_list); e != NULL; e = e->next) {
+    struct file_entry *file_entry = list_entry(e, struct file_entry, file_elem);
+    if(fd == file_entry->fd) {
+      return file_entry->file;
+    }
+  }
+  return NULL;
 }
 
