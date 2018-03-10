@@ -20,6 +20,7 @@ void check_valid_buffer(void *buffer, unsigned size);
 void get_arguments(struct intr_frame *f, int *args, int n);
 int get_kernel_ptr(const void *user_ptr);
 struct file* get_file_from_list(int fd);
+void remove_file_from_list(int fd);
 
 /* The bottom of the user virtual address space */
 #define MIN_VIRTUAL_ADDR ((void *) 0x08048000)
@@ -121,9 +122,13 @@ syscall_handler (struct intr_frame *f UNUSED)
   		break;
   	/* Report current position in a file. */
   	case SYS_TELL:
+      get_arguments(f, &args[0], 1);
+      f->eax = tell(args[0]);
   		break;
   	/* Close a file. */
   	case SYS_CLOSE:
+      get_arguments(f, &args[0], 1);
+      close(args[0]);
   		break;
   	default:
   		exit(-1);
@@ -247,6 +252,7 @@ int write (int fd, const void *buffer, unsigned size) {
    expressed in bytes from the beginning of the file */
 void seek (int fd, unsigned position) {
   lock_acquire(&file_lock);
+  /* Gets a file with a matching file descriptor */
   struct file *f = get_file_from_list(fd);
 
   if(f == NULL) {
@@ -257,13 +263,28 @@ void seek (int fd, unsigned position) {
   lock_release(&file_lock);
 }
 
-// unsigned tell (int fd) {
+/* Returns the position of the next byte to be read 
+   or written in the open file fd */
+unsigned tell (int fd) {
+  lock_acquire(&file_lock);
+  /* Gets a file with a matching file descriptor */
+  struct file *f = get_file_from_list(fd);
 
-// }
+  if(f == NULL) {
+    lock_release(&file_lock);
+    return -1;
+  }
+  unsigned pos = (unsigned) file_tell(f);
+  lock_release(&file_lock);
+  return pos;
+}
 
-// void close (int fd) {
-
-// }
+/* Closes the passed file descriptor */
+void close (int fd) {
+  lock_acquire(&file_lock);
+  remove_file_from_list(fd);
+  lock_release(&file_lock);
+}
 
 /* Ensures the pointer is valid */
 void check_valid_ptr(const void *ptr) {
@@ -323,3 +344,21 @@ struct file* get_file_from_list(int fd) {
   return NULL;
 }
 
+/* Removes and closes a file from the list of file_entrys based off the file descriptor */
+void remove_file_from_list(int fd) {
+  /* Ensure the list is not empty */
+  if(list_empty(&thread_current()->fd_list)) {
+    return;
+  }
+
+  struct list_elem *e;
+
+  for(e  = list_front(&thread_current()->fd_list); e != NULL; e = e->next) {
+    struct file_entry *file_entry = list_entry(e, struct file_entry, file_elem);
+    if(fd == file_entry->fd) {
+      file_close(file_entry->file);
+      list_remove(&file_entry->file_elem);
+      return; // We are only removing one file_entry, so we're done
+    }
+  }
+}
