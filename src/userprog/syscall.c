@@ -5,6 +5,7 @@
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 #include "threads/init.h"
+#include "threads/malloc.h"
 #include "userprog/pagedir.h"
 #include "userprog/process.h"
 #include "devices/shutdown.h"
@@ -24,6 +25,14 @@ int get_kernel_ptr(const void *user_ptr);
 
 /* A lock to ensure multiple processes can't edit a file at the same time */
 struct lock file_lock;
+
+/* Contains mapping of files to their file descriptors 
+   to be added to list of file descriptors */
+struct file_entry {
+  struct file *file;
+  int fd;
+  struct list_elem elem;
+};
 
 void
 syscall_init (void) 
@@ -76,9 +85,9 @@ syscall_handler (struct intr_frame *f UNUSED)
   		break;
   	/* Open a file. */
   	case SYS_OPEN:
-      // get_arguments(f, &args[0], 1);
-      // args[0] = get_kernel_ptr((const void*) args[0]);
-      // f->eax = open((const char*) args[0]);
+      get_arguments(f, &args[0], 1);
+      args[0] = get_kernel_ptr((const void*) args[0]);
+      f->eax = open((const char*) args[0]);
   		break;
   	/* Obtain a file's size. */
   	case SYS_FILESIZE:
@@ -164,8 +173,28 @@ bool remove (const char *file) {
   return success;
 }
 
+/* Opens the file passed in. Returns a file descripter of -1 if it could not be opened. */
 int open (const char *file) {
-  return 0;
+  lock_acquire(&file_lock);
+  struct file* open_file = filesys_open(file);
+
+  /* File could not be opened */
+  if(open_file == NULL) {
+    lock_release(&file_lock);
+    return -1;
+  }
+
+  /* Create a new file_entry struct */
+  struct file_entry *file_entry = malloc(sizeof(struct file_entry));
+  file_entry->file = open_file;
+  int fd = thread_current()->fd;
+  file_entry->fd = fd;
+  thread_current()->fd++;
+  /* Add the file_entry to the list of file entries */
+  list_push_back(&thread_current()->fd_list, &file_entry->elem);
+
+  lock_release(&file_lock);
+  return fd;
 }
 
 // int filesize (int fd) {

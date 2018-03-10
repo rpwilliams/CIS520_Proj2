@@ -534,12 +534,15 @@ init_thread (struct thread *t, const char *name, int priority)
   t->waiting_lock = NULL;
   list_init(&t->donated_list);
 
+  /* Intialize the list of file descriptors */
+  list_init(&t->fd_list);
+  /* Initialize file descriptor, which should be 2 since 0 is for
+     STDIN and 1 is for STDOUT */
+  t->fd = 2;
   
   #ifdef USERPROG
   /* Initialize the list of children */
   list_init(&t->children_list);
-  /* Initialize the list of file descriptors */
-  list_init(&t->fds);
   /* Initialize the alive semaphore */
   sema_init(&t->alive_sema, 0);
   t->exit_status = -1;

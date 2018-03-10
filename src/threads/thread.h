@@ -114,7 +114,10 @@ struct thread
     struct lock* waiting_lock;
 
     /* The list of file descriptors that belong to this thread */
-    struct list fds;
+    struct list fd_list;
+
+    /* A file descriptor */
+    int fd;
 
 
 #ifdef USERPROG
