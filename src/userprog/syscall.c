@@ -17,6 +17,7 @@ static void syscall_handler (struct intr_frame *);
 void check_valid_ptr (const void *ptr);
 void check_valid_buffer(void *buffer, unsigned size);
 void get_arguments(struct intr_frame *f, int *args, int n);
+int get_kernel_ptr(const void *user_ptr);
 
 /* The bottom of the user virtual address space */
 #define MIN_VIRTUAL_ADDR ((void *) 0x08048000)
@@ -63,18 +64,21 @@ syscall_handler (struct intr_frame *f UNUSED)
   	case SYS_CREATE:
       get_arguments(f, &args[0], 2);
       /* Transforms file from user virtual address to kernel virtual address */
-      args[0] = (int) pagedir_get_page(thread_current()->pagedir, (const void*) args[0]);
+      args[0] = get_kernel_ptr((const void*) args[0]);
       f->eax = create((const char*) args[0], (unsigned) args[1]);
   		break;
   	/* Delete a file. */
   	case SYS_REMOVE:
       get_arguments(f, &args[0], 1);
       /* Transforms file from user virtual address to kernel virtual address */
-      args[0] = (int) pagedir_get_page(thread_current()->pagedir, (const void*) args[0]);
+      args[0] = get_kernel_ptr((const void*) args[0]);
       f->eax = remove((const char*) args[0]);
   		break;
   	/* Open a file. */
   	case SYS_OPEN:
+      // get_arguments(f, &args[0], 1);
+      // args[0] = get_kernel_ptr((const void*) args[0]);
+      // f->eax = open((const char*) args[0]);
   		break;
   	/* Obtain a file's size. */
   	case SYS_FILESIZE:
@@ -86,7 +90,7 @@ syscall_handler (struct intr_frame *f UNUSED)
       /* Ensure the buffer is valid */
       check_valid_buffer((void*) args[1], (unsigned) args[2]);
       /* Transform buffer from user virtual address to kernel virtual address */
-      args[1] = (int) pagedir_get_page(thread_current()->pagedir, (const void*) args[1]);   
+      args[1] = get_kernel_ptr((const void*) args[1]);   
       f->eax = read(args[0], (void *) args[1], (unsigned) args[2]);
   		break;
   	/* Write to a file. */
@@ -96,7 +100,7 @@ syscall_handler (struct intr_frame *f UNUSED)
   		/* Ensure the buffer is valid */
   		check_valid_buffer((void*) args[1], (unsigned) args[2]);
   		/* Transform buffer from user virtual address to kernel virtual address */
-  		args[1] = (int) pagedir_get_page(thread_current()->pagedir, (const void*) args[1]);		
+  		args[1] = get_kernel_ptr((const void*) args[1]);		
   		f->eax = write(args[0], (const void *) args[1], (unsigned) args[2]);
   		break;
   	/* Change position in a file. */
@@ -161,7 +165,7 @@ bool remove (const char *file) {
 }
 
 int open (const char *file) {
-
+  return 0;
 }
 
 // int filesize (int fd) {
@@ -237,6 +241,19 @@ void check_valid_buffer(void *buffer, unsigned size) {
 		ptr++;
 	}
 	
+}
+
+/* Converts the user pointer to a kernel pointer and returns it */
+int get_kernel_ptr(const void *user_ptr) {
+  /* Ensure the user pointer is valid */
+  check_valid_ptr(user_ptr);
+  /* Converts the user pointer to a kernel pointer */
+  void *kernel_ptr = pagedir_get_page(thread_current()->pagedir, user_ptr);
+  /* Ensure the kernel pointer is not null */
+  if(kernel_ptr == NULL) {
+    exit(-1);
+  }
+  return (int) kernel_ptr;
 }
 
 /* Gets n arguments off of the stack */
