@@ -18,6 +18,9 @@ void check_valid_ptr (const void *ptr);
 void check_valid_buffer(void *buffer, unsigned size);
 void get_arguments(struct intr_frame *f, int *args, int n);
 
+/* The bottom of the user virtual address space */
+#define MIN_VIRTUAL_ADDR ((void *) 0x08048000)
+
 /* A lock to ensure multiple processes can't edit a file at the same time */
 struct lock file_lock;
 
@@ -157,9 +160,9 @@ bool remove (const char *file) {
   return success;
 }
 
-// int open (const char *file) {
+int open (const char *file) {
 
-// }
+}
 
 // int filesize (int fd) {
 
@@ -169,38 +172,37 @@ bool remove (const char *file) {
    Returns the number of bytes actually read (0 at end of file)
    or -1 if the file could not be read */
 int read (int fd, void *buffer, unsigned size) {
-  // lock_acquire(&file_lock);
+  
+  lock_acquire(&file_lock);
   if(fd == STDIN_FILENO) {
     uint8_t* local_buffer = (uint8_t*) buffer;
     for(unsigned i = 0; i < size; i++) {
       local_buffer[i] = input_getc();
     }
+    lock_release(&file_lock);
     return size;
   }
+  
+  lock_release(&file_lock);
   return 0;
-  // lock_release(&file_lock);
+  
 }
 
 /* Writes to a file. Returns size of file we wrote. */
 int write (int fd, const void *buffer, unsigned size) {
+  lock_acquire(&file_lock);
 	/* If the file descriptor is standard output,
-	 we write the buffer for the entire length of size */
-	//lock_acquire(&file_lock);
+	 we write the ENTIRE buffer the console */
 	if(fd == STDOUT_FILENO) {
-		/* Print the buffer to the console */
+		/* Prints the entire buffer to the console */
 		putbuf(buffer, size);
+    lock_release(&file_lock);
 		return size;
 	}
-	else if(fd == STDIN_FILENO) {
-		return 0; // Error
-	}
-	else {
-		// lock_acquire(&file_lock);
-		// TODO: All other cases
-		return 0;
-	}
-	// lock_release(&file_lock);
 	
+
+  lock_release(&file_lock);
+	return 0;
 }
 
 // void seek (int fd, unsigned position) {
@@ -219,7 +221,7 @@ int write (int fd, const void *buffer, unsigned size) {
 void check_valid_ptr(const void *ptr) {
 	/* If a pointer is null, is not a user virtual address,
 	 or points to unmapped memory, it is invalid*/
-	if(ptr == NULL || !is_user_vaddr(ptr)) {
+	if(ptr == NULL || !is_user_vaddr(ptr) || ptr < MIN_VIRTUAL_ADDR) {
 		/* Kill process and free resources */
 		exit(-1);
 	}
