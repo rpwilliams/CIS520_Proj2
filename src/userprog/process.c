@@ -55,13 +55,13 @@ process_execute (const char *file_name)
 
   /* Create a new thread to execute program_name */
   tid = thread_create (program_name, PRI_DEFAULT, start_process, fn_copy);
-  new_thread_tid = tid;
 
   /* Check if the thread is valid */
   if (tid == TID_ERROR) {
     palloc_free_page (fn_copy); 
   }
   else {
+    new_thread_tid = tid;
     /* Disable interrupts, as required by thread_foreach  */
     enum intr_level old_level = intr_disable();
     /* Find the thread that matches the TID of the new thread we just created,
@@ -389,8 +389,14 @@ load (const char *file_name, void (**eip) (void), void **esp)
   success = true;
 
  done:
-  /* We arrive here whether the load is successful or not. */
-  file_close (file);
+  /* Deny writes to the open file */
+  if(success) {
+    file_deny_write(file);
+  }
+  /* If we could not load the file successfully, close it */
+  else {
+    file_close (file);
+  }
   return success;
 }
 

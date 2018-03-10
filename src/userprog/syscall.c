@@ -65,6 +65,10 @@ syscall_handler (struct intr_frame *f UNUSED)
   		break;
   	/* Start another process. */
   	case SYS_EXEC:
+      get_arguments(f, &args[0], 1);
+      /* Transforms argument from user virtual address to kernel virtual address */
+      args[0] = get_kernel_ptr((const void*) args[0]);
+      f->eax = exec((const char*) args[0]);
   		break;
   	/* Wait for a child process to die. */
   	case SYS_WAIT:
@@ -93,6 +97,8 @@ syscall_handler (struct intr_frame *f UNUSED)
   		break;
   	/* Obtain a file's size. */
   	case SYS_FILESIZE:
+      get_arguments(f, &args[0], 1);
+      f->eax = filesize(args[0]);;
   		break;
   	/* Read from a file. */
   	case SYS_READ:
@@ -156,9 +162,19 @@ void exit(int status) {
 	thread_exit();
 }
 
-// pid_t exec (const char *cmd_line) {
-
-// }
+/* Runs the executable whose name is given in cmd_line,
+   Returns the new process's PID */
+pid_t exec (const char *cmd_line) {
+  /* Program cannot run */
+  if(cmd_line == NULL) {
+    return -1;
+  }
+  lock_acquire(&file_lock);
+  /* Create a new process */
+  pid_t child = process_execute(cmd_line);
+  lock_release(&file_lock);
+  return child;
+}
 
 int wait (pid_t pid) {
   return process_wait(pid);
@@ -206,9 +222,21 @@ int open (const char *file) {
   return fd;
 }
 
-// int filesize (int fd) {
+/* Returns the size, in bytes, of the file open */
+int filesize (int fd) {
+  lock_acquire(&file_lock);
+  struct file* f = get_file_from_list(fd);
 
-// }
+  /* Ensure the file was found */
+  if(f == NULL) {
+    lock_release(&file_lock);
+    return -1;
+  }
+
+  int size = file_length(f);
+  lock_release(&file_lock);
+  return size;
+}
 
 /* Reads size bytes from the file open as fd into buffer.
    Returns the number of bytes actually read (0 at end of file)
