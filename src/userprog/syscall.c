@@ -252,9 +252,15 @@ int read (int fd, void *buffer, unsigned size) {
     lock_release(&file_lock);
     return size;
   }
-  
+
+  struct file* f = get_file_from_list(fd);
+  if(f == NULL) {
+    lock_release(&file_lock);
+    return -1;
+  }
+  int bytes = file_read(f, buffer, size);
   lock_release(&file_lock);
-  return 0;
+  return bytes;
   
 }
 
@@ -270,9 +276,14 @@ int write (int fd, const void *buffer, unsigned size) {
 		return size;
 	}
 	
-
+  struct file* f = get_file_from_list(fd);
+  if(f == NULL) {
+    lock_release(&file_lock);
+    return -1;
+  }
+  int bytes = file_write(f, buffer, size);
   lock_release(&file_lock);
-	return 0;
+  return bytes;
 }
 
 
