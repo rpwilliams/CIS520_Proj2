@@ -245,25 +245,31 @@ int filesize (int fd) {
    Returns the number of bytes actually read (0 at end of file)
    or -1 if the file could not be read */
 int read (int fd, void *buffer, unsigned size) {
-  
   lock_acquire(&file_lock);
+  /* Check if standard input */
   if(fd == STDIN_FILENO) {
     /* Read input from the keyboard */
     int size = (int) input_getc();
     lock_release(&file_lock);
     return size;
   }
+  /* If we are supposed to be writing instead of reading, or the list is
+     empty, we will not write */
   else if (fd == STDOUT_FILENO || list_empty(&thread_current()->fd_list)) {
     lock_release(&file_lock);
     return 0;
   }
 
+  /* For all other file descriptors, we must get the file from
+     fd_list with the matching file descriptor. */
   struct file* f = get_file_from_list(fd);
   /* The file could not be read due to a condition other than end of file */
   if(f == NULL) {
     lock_release(&file_lock);
     return -1;
   }
+  /* Since we are reading from a file and not the keyboard, we must 
+     call file_read instead of input_getc */
   int bytes = file_read(f, buffer, size);
   lock_release(&file_lock);
   return bytes;
@@ -274,23 +280,29 @@ int read (int fd, void *buffer, unsigned size) {
 int write (int fd, const void *buffer, unsigned size) {
   lock_acquire(&file_lock);
 	/* If the file descriptor is standard output,
-	 we write the ENTIRE buffer the console */
+	   we write the buffer to the console instead of a not a file */
 	if(fd == STDOUT_FILENO) {
 		/* Prints the entire buffer to the console */
 		putbuf(buffer, size);
     lock_release(&file_lock);
 		return size;
 	}
+  /* If we are supposed to be reading instead of writing, or the list is
+     empty, we will not write */
   else if (fd == STDIN_FILENO || list_empty(&thread_current()->fd_list)) {
     lock_release(&file_lock);
     return 0;
   }
-	
+	/* For all other file descriptors, we must get the file from
+     fd_list with the matching file descriptor. */
   struct file* f = get_file_from_list(fd);
+  /* The file could not be written due to a condition other than end of file */
   if(f == NULL) {
     lock_release(&file_lock);
     return -1;
   }
+  /* Since we are writing to a file and not the keyboard, we must 
+     call file_write instead of putbuf */
   int bytes = file_write(f, buffer, size);
   lock_release(&file_lock);
   return bytes;
