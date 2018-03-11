@@ -248,15 +248,18 @@ int read (int fd, void *buffer, unsigned size) {
   
   lock_acquire(&file_lock);
   if(fd == STDIN_FILENO) {
-    uint8_t* local_buffer = (uint8_t*) buffer;
-    for(unsigned i = 0; i < size; i++) {
-      local_buffer[i] = input_getc();
-    }
+    /* Read input from the keyboard */
+    int size = (int) input_getc();
     lock_release(&file_lock);
     return size;
   }
+  else if (fd == STDOUT_FILENO || list_empty(&thread_current()->fd_list)) {
+    lock_release(&file_lock);
+    return 0;
+  }
 
   struct file* f = get_file_from_list(fd);
+  /* The file could not be read due to a condition other than end of file */
   if(f == NULL) {
     lock_release(&file_lock);
     return -1;
@@ -278,6 +281,10 @@ int write (int fd, const void *buffer, unsigned size) {
     lock_release(&file_lock);
 		return size;
 	}
+  else if (fd == STDIN_FILENO || list_empty(&thread_current()->fd_list)) {
+    lock_release(&file_lock);
+    return 0;
+  }
 	
   struct file* f = get_file_from_list(fd);
   if(f == NULL) {
