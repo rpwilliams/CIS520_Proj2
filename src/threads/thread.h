@@ -116,7 +116,7 @@ struct thread
     /* The list of file descriptors that belong to this thread */
     struct list fd_list;
 
-    /* A file descriptor */
+    /* A file descriptor that uniquely represents the file opened by this thread */
     int fd;
 
 

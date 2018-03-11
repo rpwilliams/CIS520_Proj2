@@ -536,8 +536,8 @@ init_thread (struct thread *t, const char *name, int priority)
 
   /* Intialize the list of file descriptors */
   list_init(&t->fd_list);
-  /* Initialize file descriptor, which should be 2 since 0 is for
-     STDIN and 1 is for STDOUT */
+  /* Initialize file descriptor, which should be 2 since 0 is 
+    reserved for STDIN and 1 is for STDOUT */
   t->fd = 2;
   
   #ifdef USERPROG

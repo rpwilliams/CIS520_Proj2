@@ -21,6 +21,7 @@ void get_arguments(struct intr_frame *f, int *args, int n);
 int get_kernel_ptr(const void *user_ptr);
 struct file* get_file_from_list(int fd);
 void remove_file_from_list(int fd);
+void create_file_entry(struct file* open_file, int fd);
 
 /* The bottom of the user virtual address space */
 #define MIN_VIRTUAL_ADDR ((void *) 0x08048000)
@@ -198,25 +199,27 @@ bool remove (const char *file) {
   return success;
 }
 
-/* Opens the file passed in. Returns a file descripter of -1 if it could not be opened. */
+/* Opens the file passed in, and return its file descriptor */
 int open (const char *file) {
   lock_acquire(&file_lock);
+  /* Open the closed file */
   struct file* open_file = filesys_open(file);
 
-  /* File could not be opened */
+  /* If the file cannot be opened, return an error */
   if(open_file == NULL) {
     lock_release(&file_lock);
     return -1;
   }
 
-  /* Create a new file_entry struct */
-  struct file_entry *file_entry = malloc(sizeof(struct file_entry));
-  file_entry->file = open_file;
+  /* Get the current file descriptor */
   int fd = thread_current()->fd;
-  file_entry->fd = fd;
+
+  /* Create and populate a new file_entry */
+  create_file_entry(open_file, fd);
+
+  /* Move to the next file descriptor. E.g. if the current file descriptor
+     is 10, we want to ensure the next file opened has a file descriptor of 11. */
   thread_current()->fd++;
-  /* Add the file_entry to the list of file entries */
-  list_push_back(&thread_current()->fd_list, &file_entry->file_elem);
 
   lock_release(&file_lock);
   return fd;
@@ -400,4 +403,20 @@ void remove_file_from_list(int fd) {
       return; // We are only removing one file_entry, so we're done
     }
   }
+}
+
+/* Create a new file entry, set its file and file descriptor, add it to the list
+   of file entries (fd_list), and return the file descriptor */
+void create_file_entry(struct file* open_file, int fd) {
+  /* Initialize an entry file entry */
+  struct file_entry *file_entry = malloc(sizeof(struct file_entry));
+
+  /* Set the file_entry's file */
+  file_entry->file = open_file;
+
+  /* Set file_entry's file descriptor */
+  file_entry->fd = fd;
+
+  /* Finally, add the file_entry to the list of file entries */
+  list_push_back(&thread_current()->fd_list, &file_entry->file_elem);
 }
