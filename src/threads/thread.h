@@ -119,6 +119,9 @@ struct thread
     /* A file descriptor that uniquely represents the file opened by this thread */
     int fd;
 
+    struct semaphore load_sema;
+    bool loaded;
+
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

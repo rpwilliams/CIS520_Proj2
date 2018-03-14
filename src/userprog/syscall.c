@@ -166,15 +166,22 @@ void exit(int status) {
 /* Runs the executable whose name is given in cmd_line,
    Returns the new process's PID */
 pid_t exec (const char *cmd_line) {
+  struct thread* parent = thread_current();
+
   /* Program cannot run */
   if(cmd_line == NULL) {
     return -1;
   }
+
   lock_acquire(&file_lock);
   /* Create a new process */
-  pid_t child = process_execute(cmd_line);
+  pid_t child_tid = process_execute(cmd_line);
+  struct thread* child = process_get_child(parent, child_tid);
+  if(!child->loaded) {
+    child_tid = -1;
+  }
   lock_release(&file_lock);
-  return child;
+  return child_tid;
 }
 
 int wait (pid_t pid) {

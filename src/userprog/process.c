@@ -22,6 +22,7 @@ static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
 static void check_tid (struct thread *t, void *aux UNUSED);
 
+
 /* The TID of the new thread we create in process_execute, used in check_tid */
 static tid_t new_thread_tid;
 /* The thread that matches the TID of new_thread_tid */
@@ -67,8 +68,10 @@ process_execute (const char *file_name)
     /* Find the thread that matches the TID of the new thread we just created,
        and set it to new_thread */
     thread_foreach(*check_tid, NULL);
+
+    sema_down(&new_thread->load_sema);
     /* Finally, add the new thread we created to the current thread's list of children */
-    list_push_front(&thread_current()->children_list, &new_thread->child_elem);
+    list_push_back(&thread_current()->children_list, &new_thread->child_elem);
     intr_set_level (old_level);
   }
   return tid;
@@ -92,6 +95,8 @@ start_process (void *file_name_)
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
+  thread_current()->loaded = success;
+  sema_up(&thread_current()->load_sema);
   if (!success) 
     thread_exit ();
 
@@ -127,17 +132,9 @@ process_wait (tid_t child_tid UNUSED)
     return -1;
   }
 
-  /* Look through the thread's list of children for a child with child_tid */
-  struct list_elem* e;
-  for(e = list_front(&parent->children_list); e != NULL; e = e->next) {
-    struct thread *t = list_entry(e, struct thread, child_elem);
-    if(t->tid == child_tid) {
-      child = t;
-      break;
-    }
-  }
-
-  /* Ensure child is not null */
+  /* Look through the parent's list of children for a child with child_tid */
+  child = process_get_child(parent, child_tid);
+  /* If the child is not found, return -1 */
   if(child == NULL) {
     return -1;
   }
@@ -148,6 +145,7 @@ process_wait (tid_t child_tid UNUSED)
   /* Make the parent wait until the child is done executing
      (essentially acts like a condition variable) */
   sema_down(&child->alive_sema);
+
 
   /* Return the exit status of the child when it is terminated */
   return child->exit_status;
@@ -615,5 +613,14 @@ static void check_tid (struct thread *t, void *aux UNUSED) {
   }
 }
 
-
-
+/* Look through the parent thread's list of children for a child with child_tid */
+struct thread* process_get_child(struct thread* parent, tid_t child_tid UNUSED) {
+  struct list_elem* e;
+  for(e = list_front(&parent->children_list); e != NULL; e = e->next) {
+    struct thread *t = list_entry(e, struct thread, child_elem);
+    if(t->tid == child_tid) {
+      return t; // t is the child with child_tid
+    }
+  }
+  return NULL; // Not found
+}
