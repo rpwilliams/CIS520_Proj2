@@ -545,7 +545,9 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init(&t->children_list);
   /* Initialize the alive semaphore */
   sema_init(&t->alive_sema, 0);
+  /* Initialize the load semaphore */
   sema_init(&t->load_sema, 0);
+  
   t->exit_status = -1;
   t->loaded = false;
 

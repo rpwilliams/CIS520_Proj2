@@ -119,7 +119,9 @@ struct thread
     /* A file descriptor that uniquely represents the file opened by this thread */
     int fd;
 
+    /* Used to wait if a thread is not loaded yet */
     struct semaphore load_sema;
+    /* True when thread is done loading */
     bool loaded;
 
 

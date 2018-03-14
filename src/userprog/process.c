@@ -23,9 +23,9 @@ static bool load (const char *cmdline, void (**eip) (void), void **esp);
 static void check_tid (struct thread *t, void *aux UNUSED);
 
 
-/* The TID of the new thread we create in process_execute, used in check_tid */
+/* The TID of the new thread we create in process_execute, used in check_tid, inspired by ChristianJHughes */
 static tid_t new_thread_tid;
-/* The thread that matches the TID of new_thread_tid */
+/* The thread that matches the TID of new_thread_tid, inspired by ChristianJHughes */
 static struct thread* new_thread;
 
 /* Starts a new thread running a user program loaded from
@@ -68,7 +68,7 @@ process_execute (const char *file_name)
     /* Find the thread that matches the TID of the new thread we just created,
        and set it to new_thread */
     thread_foreach(*check_tid, NULL);
-
+    /* wait until we are done loading the new thread */
     sema_down(&new_thread->load_sema);
     /* Finally, add the new thread we created to the current thread's list of children */
     list_push_back(&thread_current()->children_list, &new_thread->child_elem);
@@ -95,7 +95,9 @@ start_process (void *file_name_)
 
   /* If load failed, quit. */
   palloc_free_page (file_name);
+  /* Indicate if the load was succesful */
   thread_current()->loaded = success;
+  /* Wake the thread back up */
   sema_up(&thread_current()->load_sema);
   if (!success) 
     thread_exit ();
