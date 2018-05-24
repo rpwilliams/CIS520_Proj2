@@ -1,6 +1,6 @@
 # Project 2: User Programs
 
-[Pintos Project 3](https://web.stanford.edu/class/cs140/projects/pintos/pintos_3.html) for the Spring 2018 Operating Systems course
+[Pintos Project 2](https://web.stanford.edu/class/cs140/projects/pintos/pintos_3.html) for the Spring 2018 Operating Systems course
 at Kansas State University. More info can be found in 'Design2_Ryanwilliams.txt'.
 
 ## Authors
